@@ -53,6 +53,8 @@ struct game_state
     memory_arena Arena;
     model* Model;
     renderer_mesh_pack* Pack;
+    font UIFont;
+    
 };
 
 struct transient_state

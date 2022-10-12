@@ -90,6 +90,7 @@ material* ParseMTL(memory_arena* Arena, char* Path, u32 NumMeshes)
     u32 MaterialIndex = -1;
     char* Next;
     read_file_result File = Api.ReadFile(Path);
+    if(File.Size == 0) return Materials;
     char* Data = (char*)File.Data;
     
     while(*Data)
@@ -173,7 +174,7 @@ model* LoadModel(memory_arena* Arena, char* FileName)
         {
             Data = Next;
             Next = Consume(Data);
-            char Path[128];
+            char Path[128] = "";
             strcat(Path, "../data/obj/");
             strcat(Path, Data);
             Materials = ParseMTL(Arena, Path, ModelInfo.NumMeshes);

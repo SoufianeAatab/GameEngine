@@ -47,7 +47,16 @@ void LoadBitmap(game_assets* Assets, u32 Index)
     i32 Width, Height, Comp;
     stbi_set_flip_vertically_on_load(1);
     u8 *Pixels = stbi_load_from_memory((u8*)Data.Data, Data.Size, &Width, &Height, &Comp, 0);
+    
     u32 Format = 0x1908;
+    if(Comp == 3)
+    {
+        Format = 0x1907;
+    }
+    else if(Comp == 1)
+    {
+        Format = 0x1908;
+    }
     
     PushBitmapToGPUQueue(Assets->TextureQueue, Width, Height, Pixels, Format);
     asset* Asset = Assets->Assets + Index;
@@ -74,7 +83,7 @@ i32 GetAdvanceKernings(font Font, char Prev, char Next)
     return stbtt_GetCodepointKernAdvance(&Font.FontInfo, Prev, Next);
 }
 
-void LoadFont(game_state* State, game_assets* Assets, u32 Index)
+void LoadFont(game_assets* Assets, u32 Index)
 {
     read_file_result Data = Api.ReadFile(Assets->Types[Index].Info.FileName);
     
@@ -102,7 +111,7 @@ void LoadFont(game_state* State, game_assets* Assets, u32 Index)
         stbtt_GetCodepointBitmapBox(&Font, CodePoint, Scale, Scale, &CodePointGlyph.X0, &CodePointGlyph.Y0, &CodePointGlyph.X1, &CodePointGlyph.Y1);
         //loaded_bitmap* TempBitmap = MakeEmptyBitmap(Assets, CodePointGlyph.Width, CodePointGlyph.Height);
         //TempBitmap->Pixels = MonoBitmap;
-        u32 Format = 0x1903;
+        u32 Format = 0x1908;
         u8* MonoBitmapFlippedY = (u8*)PushSize_(&Assets->TranState->Arena, CodePointGlyph.Width*CodePointGlyph.Height*sizeof(u8)*4);
         
         // Convert form GL_RED to GL_RGBA texture
@@ -146,7 +155,7 @@ internal renderer_texture GetBitmap(game_assets *Assets, u32 Index)
     return Asset->Bitmap;
 }
 
-internal font GetFont(game_state* State, game_assets *Assets, u32 Index)
+internal font GetFont(game_assets *Assets, u32 Index)
 {
     asset* Asset = Assets->Assets + Index;
     if(Asset->Font.Index != 0)
@@ -154,6 +163,6 @@ internal font GetFont(game_state* State, game_assets *Assets, u32 Index)
         return Asset->Font;
     }
     // Load
-    LoadFont(State,Assets, Index);
+    LoadFont(Assets, Index);
     return Asset->Font;
 }

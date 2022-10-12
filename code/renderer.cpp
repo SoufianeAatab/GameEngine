@@ -1,4 +1,5 @@
 #include "renderer.h"
+#include "game_assets.cpp"
 
 render_group BeginRenderGroup(game_render_commands *Commands, game_assets *Assets)
 {
@@ -49,6 +50,8 @@ internal void PushQuad(render_group *Group, v3 P1, v3 P2, v3 P3, v3 P4, renderer
     }
     
     render_group_entry_quads *Quads = Group->Quads;
+    
+    // TODO CHECK MAX VERTEX
     
     vertex *Vertex = Group->Commands->VertexArray + Group->Commands->VertexArrayOffset;
     
@@ -242,4 +245,39 @@ void PushMesh(render_group* Group, renderer_mesh_pack* Pack, v3 Pos, v3 Scale, v
     Mesh->Scale = Scale;
     Mesh->Pos = Pos;
     Mesh->Rot = Rot;
+}
+
+void PushText(render_group* Group, font* Font, char* String, v3 Pos)
+{
+    u32 I = 0;
+    f32 X = Pos.x;
+    f32 Y = Pos.y;
+    
+    u32 LineHeight = Font->Scale * ( Font->Ascent - Font->Descent);
+    while(*String)
+    {
+        if(*String == '\n') 
+        {
+            Y -= LineHeight + Font->LineGap*Font->Scale;
+            X = Pos.x;
+            ++String;
+            continue;
+        }
+        //OutputDebugStringA("ENTRO?\n");
+        renderer_texture Texture = {};
+        glyph Glyph = Font->Glyphs[*String - ' '];
+        Texture.Width = Glyph.Width;
+        Texture.Height = Glyph.Height;
+        Texture.Index = Glyph.Index;
+        
+        i32 Advance = 0;
+        if(*(String+1)) Advance = GetAdvanceKernings(*Font, *String, *(String+1));
+        //v3 CharOffset = V3(0, BaseLine, 0.0f);
+        v3 Position = V3(X + Glyph.X0, Y - Glyph.Y1, -5.0f);
+        
+        PushBitmap(Group, Texture, Position, V2(Glyph.Width, Glyph.Height));
+        X += (Glyph.Advance + Advance) * Font->Scale;
+        ++String;
+    }
+    
 }

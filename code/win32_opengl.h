@@ -93,6 +93,12 @@ typedef void WINAPI type_glUniform3f(GLint location,
                                      GLfloat v2);
 
 
+typedef BOOL WINAPI wgl_swap_interval_ext(int interval);
+typedef const char * WINAPI wgl_get_extensions_string_ext(void);
+
+global_variable wgl_swap_interval_ext *wglSwapIntervalEXT;
+global_variable wgl_get_extensions_string_ext *wglGetExtensionsStringEXT;
+
 GLDefineGlobalFunction(glCreateShader);
 GLDefineGlobalFunction(glShaderSource);
 GLDefineGlobalFunction(glCompileShader);

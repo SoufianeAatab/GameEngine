@@ -233,6 +233,18 @@ internal void GLLoadFunctions()
     Win32GetOpenGLFunction(glUniform1i);
     Win32GetOpenGLFunction(glUniform3f);
     
+    bool VSyncEnabled = true;
+    if(!wglSwapIntervalEXT)
+    {
+        wglSwapIntervalEXT = (wgl_swap_interval_ext *)wglGetProcAddress("wglSwapIntervalEXT");
+    }
+    
+    if(wglSwapIntervalEXT)
+    {
+        OutputDebugStringA("Enabling SWAP INTERVAL\n");
+        wglSwapIntervalEXT(VSyncEnabled ? 1 : 0);
+    }
+    
 }
 
 internal bool Win32CreateGLContext(HWND hWnd)
@@ -424,7 +436,7 @@ read_file_result ReadFile(char *FileName)
     else
     {
         // TODO: logging
-        DebugPrint("Can`t Open File");
+        DebugPrint("Can`t Open File: %s\n", FileName);
     }
     
     return Result;
@@ -466,6 +478,31 @@ inline f32 Win32GetSecondsElapsed(u64 Start, u64 End)
     return Result;
 }
 
+internal void Win32InitGameMemory(game_memory* Memory, platform_api* Api)
+{
+    LPVOID BaseAddress = 0;
+    Memory->PermanentStorageSize = Megabytes(16);
+    Memory->TransientStorageSize = Megabytes(16);
+    Memory->PermanentStorage = VirtualAlloc(BaseAddress,
+                                            (size_t)(Memory->PermanentStorageSize + Memory->TransientStorageSize),
+                                            MEM_COMMIT | MEM_RESERVE,
+                                            PAGE_READWRITE);
+    Memory->TransientStorage = (u8 *)Memory->PermanentStorage + Memory->PermanentStorageSize;
+    
+    Memory->Platform = Api;
+    
+}
+
+internal void Win32InitPlatformApi(platform_api* Api)
+{
+    Api->ReadFile = ReadFile;
+    Api->FreeFile = FreeFile;
+    Api->AllocMem = AllocMem;
+    Api->FreeMem = FreeMem;
+    Api->CopyMem = CopyMem;
+    Api->DebugPrint = DebugPrint;
+}
+
 int CALLBACK
 WinMain(
         HINSTANCE Instance,
@@ -500,29 +537,15 @@ WinMain(
         if (Window)
         {
             HDC HandleDc = GetDC(Window);
-            game_memory Memory = {};
-            Memory.PermanentStorageSize = Megabytes(16);
-            Memory.TransientStorageSize = Megabytes(16);
-            LPVOID BaseAddress = 0;
-            Memory.PermanentStorage = VirtualAlloc(
-                                                   BaseAddress,
-                                                   (size_t)(Memory.PermanentStorageSize + Memory.TransientStorageSize),
-                                                   MEM_COMMIT | MEM_RESERVE,
-                                                   PAGE_READWRITE);
-            Memory.TransientStorage = (u8 *)Memory.PermanentStorage + Memory.PermanentStorageSize;
             
             Api = {};
-            Api.ReadFile = ReadFile;
-            Api.FreeFile = FreeFile;
-            Api.AllocMem = AllocMem;
-            Api.FreeMem = FreeMem;
-            Api.CopyMem = CopyMem;
-            Api.DebugPrint = DebugPrint;
+            Win32InitPlatformApi(&Api);
             
-            Memory.Platform = &Api;
+            game_memory Memory = {};
+            Win32InitGameMemory(&Memory, &Api);
             
             opengl OpenGL = OpenglInit();
-            OpenGL.VertexArray =  (vertex *) AllocMem(Megabytes(2));
+            OpenGL.VertexArray =  (vertex *) AllocMem(Megabytes(8));
             
             OpenGLInitTexturesQueue(&OpenGL);
             OpenGLInitMeshesQueue(&OpenGL);
@@ -581,8 +604,8 @@ WinMain(
                         NewInput->MouseButtons[4].IsDown = GetKeyState(VK_XBUTTON2) & (1 << 15);
                     }
                     
-                    NewInput->Dt = TargetSecondsPerFrame;
-                    //NewInput->Dt = PrevDT;
+                    //NewInput->Dt = TargetSecondsPerFrame;
+                    NewInput->Dt = PrevDT;
                     
                     win32_window_dimension Dim = Win32GetWindowDimension(Window);
                     game_render_commands* Commands = OpenGLBeginFrame(&OpenGL, Dim.Width, Dim.Height);
@@ -594,7 +617,7 @@ WinMain(
                     SwapBuffers(HandleDc);
                     
                     f32 SecondsElapsed = Win32GetSecondsElapsed(LastCounter, Win32GetPerfCounter());
-                    if (SecondsElapsed < TargetSecondsPerFrame)
+                    /*if (SecondsElapsed < TargetSecondsPerFrame)
                     {
                         if (SleepIsGranular)
                         {
@@ -614,8 +637,8 @@ WinMain(
                     {
                         // We missed a frame
                         // TODO: logging
-                    }
-                    //PrevDT = SecondsElapsed;
+                    }*/
+                    PrevDT = SecondsElapsed;
                     u64 EndCounter = Win32GetPerfCounter();
                     LastCounter = EndCounter;
                     

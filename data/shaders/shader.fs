@@ -18,6 +18,6 @@ void main( )
     vec4 col = vColor;
 	col.a = 1.0f;
     vec4 TextureInfo = texture(textureSampler, vec3(vUv,float(FragTextureIndex)));
-    vec4 textureColor = (TextureInfo * col);
+    vec4 textureColor = (TextureInfo );
     color = textureColor;
 }

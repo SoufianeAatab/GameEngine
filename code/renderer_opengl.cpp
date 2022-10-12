@@ -292,7 +292,7 @@ internal void ManageTextureQueue(game_render_commands *Commands, opengl_program 
                         Bitmap->Width, 
                         Bitmap->Height, 
                         1, 
-                        GL_RGBA, 
+                        Bitmap->Format, 
                         GL_UNSIGNED_BYTE, 
                         Bitmap->Pixels);
         
