@@ -1,6 +1,37 @@
 #include "game_mesh.h"
 #include "tokenizer.cpp"
 
+renderer_mesh_pack* SetupModel(memory_arena* Arena, model* Model, game_render_commands* Commands)
+{
+    renderer_mesh_pack* Pack = (renderer_mesh_pack*) PushStruct(Arena, renderer_mesh_pack);
+    Pack->Meshes = (renderer_mesh*) PushSize_(Arena, sizeof(renderer_mesh) * Model->Info.NumMeshes);
+    Pack->Size = Model->Info.NumMeshes;
+    if(!Commands->MeshQueue.Meshes)
+    {
+        Commands->MeshQueue.Meshes = (loaded_mesh*)PushSize_(Arena, sizeof(loaded_mesh) * 32);
+        Commands->MeshQueue.Count = 0;
+        Commands->MeshQueue.LoadedCount = 0;
+    }
+    
+    for(u32 Index=0;Index<Model->Info.NumMeshes;++Index)
+    {
+        mesh* Mesh = Model->Meshes + Index;
+        loaded_mesh* MeshQueue = Commands->MeshQueue.Meshes + Commands->MeshQueue.Count;
+        MeshQueue->Size = Mesh->NumVert;
+        MeshQueue->Vertices = Mesh->Vertices;
+        MeshQueue->UV = Mesh->Textures;
+        MeshQueue->Normals = Mesh->Normals;
+        
+        MeshQueue->ID = &Pack->Meshes[Index].Vao;
+        Pack->Meshes[Index].NumVert = Mesh->NumVert;
+        Pack->Meshes[Index].Material = Mesh->Material;
+        Commands->MeshQueue.Count += 1;
+        //CreateVertexArray(Mesh->NumVert, Mesh->Vertices, Mesh->Textures, Mesh->Normals); 
+    }
+    
+    return Pack;
+}
+
 u32 GetNumVerticesPerFace(char* Data)
 {
     u32 VerticesPerFace = 0;
@@ -257,34 +288,3 @@ model* LoadModel(memory_arena* Arena, char* FileName)
     return Model;
 }
 
-
-renderer_mesh_pack* SetupModel(memory_arena* Arena, model* Model, game_render_commands* Commands)
-{
-    renderer_mesh_pack* Pack = (renderer_mesh_pack*) PushStruct(Arena, renderer_mesh_pack);
-    Pack->Meshes = (renderer_mesh*) PushSize_(Arena, sizeof(renderer_mesh) * Model->Info.NumMeshes);
-    Pack->Size = Model->Info.NumMeshes;
-    if(!Commands->MeshQueue.Meshes)
-    {
-        Commands->MeshQueue.Meshes = (loaded_mesh*)PushSize_(Arena, sizeof(loaded_mesh) * 32);
-        Commands->MeshQueue.Count = 0;
-        Commands->MeshQueue.LoadedCount = 0;
-    }
-    
-    for(u32 Index=0;Index<Model->Info.NumMeshes;++Index)
-    {
-        mesh* Mesh = Model->Meshes + Index;
-        loaded_mesh* MeshQueue = Commands->MeshQueue.Meshes + Commands->MeshQueue.Count;
-        MeshQueue->Size = Mesh->NumVert;
-        MeshQueue->Vertices = Mesh->Vertices;
-        MeshQueue->UV = Mesh->Textures;
-        MeshQueue->Normals = Mesh->Normals;
-        
-        MeshQueue->ID = &Pack->Meshes[Index].Vao;
-        Pack->Meshes[Index].NumVert = Mesh->NumVert;
-        Pack->Meshes[Index].Material = Mesh->Material;
-        Commands->MeshQueue.Count += 1;
-        //CreateVertexArray(Mesh->NumVert, Mesh->Vertices, Mesh->Textures, Mesh->Normals); 
-    }
-    
-    return Pack;
-}

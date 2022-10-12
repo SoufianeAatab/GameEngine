@@ -1,4 +1,4 @@
-#include "render_group.h"
+#include "renderer.h"
 #include "math.h"
 #include "opengl.h"
 
@@ -97,7 +97,6 @@ internal opengl OpenglInit()
 {
     read_file_result VS = Api.ReadFile("../data/shaders/shader.vs");
     read_file_result FS = Api.ReadFile("../data/shaders/shader.fs");
-    
     
     opengl Opengl = {};
     
@@ -223,10 +222,59 @@ internal opengl OpenglInit()
     return Opengl;
 }
 
+internal void OpenGLInitTexturesQueue(opengl* OpenGL)
+{
+    OpenGL->Commands.TextureQueue.NextTextureSlotEmpty = 1;
+    OpenGL->Commands.TextureQueue.Count = 0;
+    OpenGL->Commands.TextureQueue.LoadedCount = 0;
+}
+
+internal void OpenGLInitMeshesQueue(opengl* OpenGL)
+{
+    OpenGL->Commands.MeshQueue.Count = 0;
+    OpenGL->Commands.MeshQueue.LoadedCount = 0;
+}
+
+internal void OpenGLInitRenderCommands(opengl* OpenGL)
+{
+    OpenGL->Commands.PushBufferSize = 0;
+    OpenGL->Commands.MaxPushBufferSize = Megabytes(4);
+    OpenGL->Commands.VertexArray = OpenGL->VertexArray;
+    OpenGL->Commands.VertexArrayOffset = 0;
+}
+
+u32 CreateVertexArray(u32 Size, v3* Vertices, v2* UV, v3* Normals, opengl_program* Program)
+{
+    u32 Vao;
+    glGenVertexArrays(1, &Vao);
+    glBindVertexArray(Vao);
+    
+    u32 VboVertices, VboTextures, VboNormals;
+    glGenBuffers(1, &VboVertices);
+    glBindBuffer(GL_ARRAY_BUFFER, VboVertices);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(v3) * Size, Vertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(Program->VertexLocation);
+    glVertexAttribPointer(Program->VertexLocation, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    
+    glGenBuffers(1, &VboTextures);
+    glBindBuffer(GL_ARRAY_BUFFER, VboTextures);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(v2) * Size, UV, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(Program->TextureLocation);
+    glVertexAttribPointer(Program->TextureLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    
+    glGenBuffers(1, &VboNormals);
+    glBindBuffer(GL_ARRAY_BUFFER, VboNormals);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(v3) * Size, Normals, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(Program->NormalLocation);
+    glVertexAttribPointer(Program->NormalLocation, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    
+    return Vao;
+}
+
 internal void ManageTextureQueue(game_render_commands *Commands, opengl_program Program)
 {
     renderer_texture_queue *Queue = &Commands->TextureQueue;
-    if(!Queue) return;
+    //Assert(*Queue);
     while (Queue->LoadedCount < Queue->Count)
     {
         loaded_bitmap *Bitmap = Queue->Bitmaps + Queue->LoadedCount;
@@ -255,44 +303,10 @@ internal void ManageTextureQueue(game_render_commands *Commands, opengl_program 
     Queue->Count = 0;
 }
 
-u32 CreateVertexArray(u32 Size, v3* Vertices, v2* UV, v3* Normals, opengl_program* Program)
-{
-    u32 Vao;
-    glGenVertexArrays(1, &Vao);
-    glBindVertexArray(Vao);
-    
-    u32 VboVertices, VboTextures, VboNormals;
-    glGenBuffers(1, &VboVertices);
-    glBindBuffer(GL_ARRAY_BUFFER, VboVertices);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(v3) * Size, Vertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(Program->VertexLocation);
-    glVertexAttribPointer(Program->VertexLocation, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    
-    glGenBuffers(1, &VboTextures);
-    glBindBuffer(GL_ARRAY_BUFFER, VboTextures);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(v2) * Size, UV, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(Program->TextureLocation);
-    glVertexAttribPointer(Program->TextureLocation, 2, GL_FLOAT, GL_FALSE, 0, 0);
-    
-    glGenBuffers(1, &VboNormals);
-    glBindBuffer(GL_ARRAY_BUFFER, VboNormals);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(v3) * Size, Normals, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(Program->NormalLocation);
-    glVertexAttribPointer(Program->NormalLocation, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    
-    /*glGenBuffers(1, &VboNormals);
-    glBindBuffer(GL_ARRAY_BUFFER, VboNormals);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(v3) * Size, Normals, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(Program->NormalLocation);
-    glVertexAttribPointer(Program->NormalLocation, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    */
-    return Vao;
-}
-
 internal void ManageMeshQueue(game_render_commands* Commands, opengl_program Program)
 {
     renderer_mesh_queue* Queue = &Commands->MeshQueue;
-    if(!Queue) return;
+    //Assert(*Queue);
     while (Queue->LoadedCount < Queue->Count)
     {
         loaded_mesh *Mesh = Queue->Meshes + Queue->LoadedCount;
@@ -308,16 +322,32 @@ internal void ManageMeshQueue(game_render_commands* Commands, opengl_program Pro
     }
 }
 
-f32 Angle = 0;
-
-internal void OpenglRenderCommandsToOutput(game_render_commands *Commands, opengl *OpenGL)
+internal game_render_commands* OpenGLBeginFrame(opengl* OpenGL, u32 Width, u32 Height)
 {
-    glViewport(0, 0, Commands->Width, Commands->Height);
+    
     opengl_program Program = OpenGL->Program;
     opengl_program MeshProgram = OpenGL->MeshProgram;
     
-    ManageTextureQueue(Commands, Program);
-    ManageMeshQueue(Commands, MeshProgram);
+    ManageTextureQueue(&OpenGL->Commands, Program);
+    ManageMeshQueue(&OpenGL->Commands, MeshProgram);
+    
+    OpenGL->Commands.Width = Width;
+    OpenGL->Commands.Height = Height;
+    
+    glViewport(0, 0, OpenGL->Commands.Width, OpenGL->Commands.Height);
+    
+    // Buffer from where GPU will read
+    OpenGL->Commands.PushBufferBase = OpenGL->PushBufferMemory;
+    OpenGL->Commands.VertexArrayOffset = 0;
+    OpenGL->Commands.PushBufferSize = 0;
+    
+    return &OpenGL->Commands;
+}
+
+internal void OpenGLEndFrame(game_render_commands *Commands, opengl *OpenGL)
+{
+    opengl_program Program = OpenGL->Program;
+    opengl_program MeshProgram = OpenGL->MeshProgram;
     
     for (u32 Base = 0; Base < Commands->PushBufferSize;)
     {
@@ -328,6 +358,7 @@ internal void OpenglRenderCommandsToOutput(game_render_commands *Commands, openg
         {
             case Quads:
             {
+                
                 glUseProgram(Program.ID);
                 Assert(OpenGL->Vao > 0 && OpenGL->Vbo > 0);
                 //Assert(Program.TransformLocation >= 0);
@@ -335,13 +366,16 @@ internal void OpenglRenderCommandsToOutput(game_render_commands *Commands, openg
                 
                 // Pass directly a mat4 
                 camera_transform Camera = Quads->CameraTransform;
+                
                 glUniformMatrix4fv(Program.TransformLocation, 1, GL_TRUE, &Camera.Transform.M[0][0]);
+                
                 glBindVertexArray(OpenGL->Vao);
                 glUniform1i(Program.TextureSamplerLocation, 0);
                 
                 glBindTexture(GL_TEXTURE_2D_ARRAY, Program.TextureArrayID);
                 glBindBuffer(GL_ARRAY_BUFFER, OpenGL->Vbo);
                 
+                // For multiple render groups
                 glBufferData(GL_ARRAY_BUFFER, 
                              sizeof(vertex) * (Commands->VertexArrayOffset + Quads->Count * 6), 
                              Commands->VertexArray, 
@@ -366,6 +400,7 @@ internal void OpenglRenderCommandsToOutput(game_render_commands *Commands, openg
                 
                 glDrawArrays(GL_TRIANGLES, Quads->VertexOffset, Quads->Count * 6);
                 glBindVertexArray(0);
+                
                 // Disable VertexAttribs?
                 Base += sizeof(render_group_entry_quads);
             }
@@ -421,7 +456,4 @@ internal void OpenglRenderCommandsToOutput(game_render_commands *Commands, openg
         }
     }
     
-    Commands->PushBufferBase = OpenGL->PushBufferMemory;
-    Commands->VertexArrayOffset = 0;
-    Commands->PushBufferSize = 0;
 }

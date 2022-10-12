@@ -19,15 +19,16 @@ struct opengl_program
 
 struct opengl
 {
-    i32 (*ReloadShaders)();
-    
     opengl_program Program;    
     opengl_program MeshProgram;
     
     GLuint Vao;
     GLuint Vbo;
     
+    game_render_commands Commands;
     
     u8 PushBufferMemory[65536];
     struct vertex *VertexArray;
+    
+    
 };

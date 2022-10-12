@@ -64,7 +64,7 @@ typedef BOOL WINAPI wglChoosePixelFormatARB_type(HDC hdc, const int *piAttribILi
 
 global_variable wgl_create_context_attribs_arb *wglCreateContextAttribsARB;
 global_variable wglChoosePixelFormatARB_type *wglChoosePixelFormatARB;
-global_variable game_render_commands GlobalGameVideo = {};
+
 global_variable u64 GlobalPerfCounterFrequency;
 
 global_variable platform_api Platform;
@@ -523,22 +523,10 @@ WinMain(
             
             opengl OpenGL = OpenglInit();
             OpenGL.VertexArray =  (vertex *) AllocMem(Megabytes(2));
-            OpenGL.ReloadShaders = ReloadShaders;
             
-            GlobalGameVideo.TextureQueue.NextTextureSlotEmpty = 1;
-            GlobalGameVideo.TextureQueue.Count = 0;
-            GlobalGameVideo.TextureQueue.LoadedCount = 0;
-            
-            GlobalGameVideo.MeshQueue.Count = 0;
-            GlobalGameVideo.MeshQueue.LoadedCount = 0;
-            
-            win32_window_dimension Dim = Win32GetWindowDimension(Window);
-            GlobalGameVideo.Width = Dim.Width;
-            GlobalGameVideo.Height = Dim.Height;
-            GlobalGameVideo.PushBufferSize = 0;
-            GlobalGameVideo.MaxPushBufferSize = Megabytes(4);
-            GlobalGameVideo.VertexArray = OpenGL.VertexArray;
-            GlobalGameVideo.VertexArrayOffset = 0;
+            OpenGLInitTexturesQueue(&OpenGL);
+            OpenGLInitMeshesQueue(&OpenGL);
+            OpenGLInitRenderCommands(&OpenGL);
             
             // GlobalGameVideo.OpenGL = OpenGL;
             
@@ -567,9 +555,6 @@ WinMain(
                 f32 PrevDT = TargetSecondsPerFrame;
                 while (GlobalRunning)
                 {
-                    // Reorganize This:
-                    GlobalGameVideo.PushBufferBase = OpenGL.PushBufferMemory;
-                    
                     game_keyboard *NewKeyboardController = &NewInput->Keys;
                     game_keyboard *OldKeyboardController = &OldInput->Keys;
                     *NewKeyboardController = {};
@@ -599,9 +584,13 @@ WinMain(
                     NewInput->Dt = TargetSecondsPerFrame;
                     //NewInput->Dt = PrevDT;
                     
-                    GameUpdateVideo(&Memory, &GlobalGameVideo, NewInput);
+                    win32_window_dimension Dim = Win32GetWindowDimension(Window);
+                    game_render_commands* Commands = OpenGLBeginFrame(&OpenGL, Dim.Width, Dim.Height);
                     
-                    OpenglRenderCommandsToOutput(&GlobalGameVideo, &OpenGL);
+                    GameUpdateVideo(&Memory, Commands, NewInput);
+                    
+                    OpenGLEndFrame(Commands, &OpenGL);
+                    
                     SwapBuffers(HandleDc);
                     
                     f32 SecondsElapsed = Win32GetSecondsElapsed(LastCounter, Win32GetPerfCounter());

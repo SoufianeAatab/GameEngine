@@ -1,5 +1,5 @@
 #include "game.h"
-#include "render_group.cpp"
+#include "renderer.cpp"
 #include "game_assets.cpp"
 #include "game_mesh.cpp"
 
@@ -310,12 +310,10 @@ extern "C" GAME_UPDATE_VIDEO(GameUpdateVideo)
     mat4 View = Translate(I, V3(10.0f,0.0f,0.0f));
     mat4 Transform2 = OrthoProj * View;
     
-    render_group RenderGroupUI = BeginRenderGroup(Video, TransientState->Assets);
-    
     //PushClear(&RenderGroupUI, V3(1.0f));
     
-    PushCameraTransform(&RenderGroupUI, Transform2);
-    DrawFPS(State,&RenderGroupUI, Input->Dt, &State->Camera);
+    PushCameraTransform(&RenderGroup, Transform2);
+    DrawFPS(State,&RenderGroup, Input->Dt, &State->Camera);
     
     // Reset memory
     

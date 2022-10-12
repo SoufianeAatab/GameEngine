@@ -1,4 +1,4 @@
-#include "render_group.h"
+#include "renderer.h"
 
 render_group BeginRenderGroup(game_render_commands *Commands, game_assets *Assets)
 {
@@ -24,7 +24,6 @@ internal void *PushRenderElement(render_group *Group, size_t Size, render_group_
     return Result;
 }
 
-
 renderer_texture GetWhiteTexture()
 {
     renderer_texture Texture = {};
@@ -33,7 +32,6 @@ renderer_texture GetWhiteTexture()
     Texture.Index = 0;
     return Texture;
 }
-
 
 internal void PushQuad(render_group *Group, v3 P1, v3 P2, v3 P3, v3 P4, renderer_texture Texture, v3 Color = V3(1.0f, 1.0f, 1.0f))
 {
@@ -44,7 +42,9 @@ internal void PushQuad(render_group *Group, v3 P1, v3 P2, v3 P3, v3 P4, renderer
     {
         Group->Quads = (render_group_entry_quads *)PushRenderElement(Group, sizeof(render_group_entry_quads), render_group_entry_type::Quads);
         Group->Quads->Count = 0;
+        // Set camera to the current render group
         Group->Quads->CameraTransform = Group->CameraTransform;
+        // VertexOffset in gpu vertex array
         Group->Quads->VertexOffset = Group->Commands->VertexArrayOffset;
     }
     
@@ -217,6 +217,7 @@ void PushCube(render_group *Group, v3 Pos, v3 Dim, v3 Color)
 void PushCameraTransform(render_group *Group, mat4 Transform)
 {
     Group->CameraTransform.Transform = Transform;
+    Group->Quads = 0;
 }
 
 void PushBitmap(render_group *RenderGroup, renderer_texture Texture, v3 Pos, v2 Dim)

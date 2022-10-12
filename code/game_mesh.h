@@ -3,7 +3,7 @@
 #ifndef GAME_MESH_H
 
 #include "platform.h"
-#include "render_group.h"
+#include "renderer.h"
 
 #define MAX_MESHES_PER_MODEL 8
 
