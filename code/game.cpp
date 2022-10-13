@@ -32,7 +32,7 @@ void SetCameraTransform(camera_settings *Camera)
 {
     Camera->Pitch = 0.3* 180;
     Camera->Yaw = 0;
-    Camera->Pos = V3(0.0f, 33.0f, 24.0f);
+    Camera->Pos = V3(0.0f, 62.0f, 58.0f);
     Camera->Fov = 30.0f;
 }
 
@@ -218,6 +218,7 @@ extern "C" GAME_UPDATE_VIDEO(GameUpdateVideo)
         //InitTileMap(State->TileMap);
     }
     
+    //if(Input)
     
     //State->Used = TransientState->Arena.Used;
     entity *Player = &State->Player;
@@ -229,13 +230,13 @@ extern "C" GAME_UPDATE_VIDEO(GameUpdateVideo)
     UpdateCamera(Input, State);
     UpdatePlayer(Input, Player);
     
-    PushClear(&RenderGroup, V3(0.5f));
+    PushClear(&RenderGroup, V3(0.0f));
     PushTerrain(&RenderGroup, TileMap);
-    PushMesh(&RenderGroup, State->Pack, 
+    /*PushMesh(&RenderGroup, State->Pack, 
              V3(5.0f,2.0f,2.0f), 
              V3(5.0f,5.0f,5.0f),
              V3(0.0f,M_PI/2.0f,0.0f));
-    
+    */
     // UI
     UpdateAndRenderUI(&RenderGroup, Video, Input, State);
 }

@@ -19,7 +19,7 @@ void main( )
     vColor = vec4(color,1.0);
 	//vColor = vec4(UColor,1.0);
 
-    vPos = gl_Position.xyz;
+    vPos = position;
     vUv = uv;
     FragTextureIndex = TextureIndex;
     vNormal = normal;
