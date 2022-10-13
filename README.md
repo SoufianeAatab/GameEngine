@@ -20,6 +20,8 @@ Todo:
   - Physically based rendering
   - Shadows & Lighting
   - Add Linux Support Window
+  - Create texture atlas for font rendering(now using texture arrays)
+  - Push static procedural meshes
 
 
 Dependencies:
